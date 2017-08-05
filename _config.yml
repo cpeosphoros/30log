@@ -1,0 +1,8 @@
+title: 30log
+description: A 30-lines library for object-orientation in Lua
+google_analytics: UA-33850683-1
+show_downloads: true
+theme: jekyll-theme-minimal
+
+gems:
+  - jekyll-mentions
