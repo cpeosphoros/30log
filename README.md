@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.org/cpeosphoros/30log-plus.png)](https://travis-ci.org/cpeosphoros/30log-plus)
 [![Lua](https://img.shields.io/badge/Lua-5.1%2C%205.2%2C%205.3%2C%20JIT-blue.svg)]()
 [![License](http://img.shields.io/badge/Licence-MIT-brightgreen.svg)](LICENSE)
-[![Coverage Status](https://coveralls.io/repos/cpeosphoros/30log-plus/badge.png?branch=master)](https://coveralls.io/r/cpeosphoros/30log-plus?branch=master)
+[![Coverage Status](https://coveralls.io/repos/github/cpeosphoros/30log-plus/badge.svg?branch=master)](https://coveralls.io/github/cpeosphoros/30log-plus?branch=master)
 
 *30log*, in extenso *30 Lines Of Goodness* is a minified framework for [object-orientation](http://lua-users.org/wiki/ObjectOrientedProgramming) in Lua.
 It provides  *named* and *unnamed classes*, *single inheritance*, *metamethods* and a basic support for _mixins_. In *30 lines*.<br/>
