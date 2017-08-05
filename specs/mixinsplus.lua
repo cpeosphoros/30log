@@ -75,7 +75,7 @@ context('mixinsplus', function()
 			local instance
 			before(function() instance = aclass:with(chain1, chain2)() end)
 
-			test("Mixin's methods run before the correspondent class method", function()
+			test("Mixins' methods run before the correspondent class method", function()
 				instance:ChainTrue()
 				assert_equal(instance.a, "AA")
 				assert_equal(instance.b, "C2")
@@ -99,7 +99,7 @@ context('mixinsplus', function()
 			local instance
 			before(function() instance = aclass:with(chain1):with(chain2)() end)
 
-			test("Mixin's methods run before the correspondent class method", function()
+			test("Mixins' methods run before the correspondent class method", function()
 				instance:ChainTrue()
 				assert_equal(instance.a, "AA")
 				assert_equal(instance.b, "C2")

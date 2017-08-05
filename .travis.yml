@@ -16,15 +16,16 @@ env:
 before_install:
   - source .travis/setenv_lua.sh
   - pip install --user cpp-coveralls
+  - luarocks install cluacov
   - luarocks install Lua-cURL         --server=https://luarocks.org/dev
-  - luarocks install luacov-coveralls --server=https://luarocks.org/dev
+  - luarocks install luacov-coveralls --server=http://rocks.moonscript.org/dev
   - luarocks install telescope        --server=http://rocks.moonscript.org
   - bash .travis/fixtsc.sh
 
 script: "tsc -f specs/*"
 
 after_success:
-  - luacov-coveralls -c .luacov -e 30log-plus-
+  - luacov-coveralls -c .luacov
 
 notifications:
   email:
