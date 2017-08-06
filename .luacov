@@ -12,10 +12,10 @@ return {
   ["statsfile"] = "luacov.stats.out",
 
   -- filename to store report
-  ["reportfile"] = "luacov.report.json",
+  ["reportfile"] = "luacov.report.out",
 
   -- Run reporter on completion? (won't work for ticks)
-  runreport = false,
+  runreport = true,
 
   -- Delete stats file after reporting?
   deletestats = false,
@@ -25,7 +25,6 @@ return {
   -- (exclude overrules include, do not include
   -- the .lua extension)
   ["include"] = {
-		'30log-plus'
   },
 
   -- Patterns for files to exclude when reporting

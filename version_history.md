@@ -1,9 +1,10 @@
 #Cpeosphoros's 30log-plus fork Version history#
 
-##alpha.0 (08/04/17)
-* Class setup
-* Mixin setup
-* Mixin chaining
+##plus.0.0.0 (08/06/17)
+* Class setup methods
+* Mixin setup methods
+* Mixin chaining methods
+* Mixin intercepting methods
 
 #Yonaba's 30log Version history#
 

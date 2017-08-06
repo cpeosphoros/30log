@@ -6,25 +6,26 @@ env:
   global:
     - LUAROCKS=2.2.2
   matrix:
-    - LUA=lua5.1
-    - LUA=lua5.2
-    - LUA=lua5.3
-    - LUA=luajit     # latest stable version (2.0.3)
-    - LUA=luajit2.0  # current head of 2.0 branch
-    - LUA=luajit2.1  # current head of 2.1 branch
+    - LUA=lua5.1    LUAVER=5.1
+    - LUA=lua5.2    LUAVER=5.2
+    - LUA=lua5.3    LUAVER=5.3
+    - LUA=luajit    LUAVER=5.1 # latest stable version (2.0.3)
+    - LUA=luajit2.0 LUAVER=5.1 # current head of 2.0 branch
+    - LUA=luajit2.1 LUAVER=5.1 # current head of 2.1 branch
 
 before_install:
   - source .travis/setenv_lua.sh
   - pip install --user cpp-coveralls
+  - luarocks install cluacov
   - luarocks install Lua-cURL         --server=https://luarocks.org/dev
-  - luarocks install luacov-coveralls --server=https://luarocks.org/dev
+  - luarocks install luacov-coveralls --server=http://rocks.moonscript.org/dev
   - luarocks install telescope        --server=http://rocks.moonscript.org
   - bash .travis/fixtsc.sh
 
 script: "tsc -f specs/*"
 
 after_success:
-  - luacov-coveralls -c .luacov -e 30log-plus-
+  - luacov-coveralls -c .luacov
 
 notifications:
   email:

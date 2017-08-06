@@ -35,7 +35,7 @@ A full documentation is available on the [wiki](https://github.com/cpeosphoros/3
 
 [Class-Commons](https://github.com/bartbes/Class-Commons) is an interface which provides a common API for a wide range of Object Orientation libraries in Lua. There is a small plugin, originally written by [TsT](https://github.com/tst2005)
 which provides compatibility between *30log* and *Class-commons*. <br/>
-See the module [30log-commons.lua](https://github.com/Yonaba/30log/blob/master/30log-commons.lua).
+See the module [30log-commons.lua](https://github.com/cpeosphoros/30log-plus/blob/master/30log-commons.lua).
 
 
 ## Specs
