@@ -70,15 +70,19 @@ local function verifyCallback(obj, name, callbacks)
 	end
 end
 
+local function tblInsert(tbl, value)
+	tbl[#tbl+1] = value
+end
+
 local function construcIntercepts(obj, mixin, before, after, objCallbacks)
 	for _ , name in ipairs(mixin.intercept or {}) do
 		if type(mixin["Before"..name]) == "function" then
 			before[name] = before[name] or {}
-			table.insert(before[name], mixin["Before"..name])
+			tblInsert(before[name], mixin["Before"..name])
 		end
 		if type(mixin["After"..name]) == "function" then
 			after[name] = after[name] or {}
-			table.insert(after[name], mixin["After"..name])
+			tblInsert(after[name], mixin["After"..name])
 		end
 		verifyCallback(obj, name, objCallbacks)
 	end
@@ -93,7 +97,7 @@ local function constructHandlers(obj, mixin, handlers, objCallbacks)
 	end
 	for name, handler in pairs(mHandlers) do
 		handlers[name] = handlers[name] or {}
-		table.insert(handlers[name], handler)
+		tblInsert(handlers[name], handler)
 		verifyCallback(obj, name, objCallbacks)
 	end
 end
@@ -151,7 +155,7 @@ local function new(self,...)
 	end
 	for name, callback in pairs(selfCallbacks) do
 		handlers[name] = handlers[name] or {}
-		table.insert(handlers[name], callback)
+		tblInsert(handlers[name], callback)
 	end
 	for name, callbacks in pairs(before) do
 		handlers[name] = handlers[name] or {}
@@ -162,7 +166,7 @@ local function new(self,...)
 	for name, callbacks in pairs(after) do
 		handlers[name] = handlers[name] or {}
 		for _, callback in ipairs(callbacks) do
-			table.insert(handlers[name], callback)
+			tblInsert(handlers[name], callback)
 		end
 	end
 	local nObj = instantiate(true, self, ...)
@@ -175,7 +179,7 @@ local function with(self,...)
 	for _, mixin in ipairs({...}) do
 		assert(self.mixins[mixin] ~= true, ('Attempted to include a mixin which was already included in %s'):format(tostring(self)))
 		self.mixins[mixin] = true
-		table.insert(self.ordMixins, mixin)
+		tblInsert(self.ordMixins, mixin)
 	end
 	return self
 end
