@@ -6,12 +6,12 @@ env:
   global:
     - LUAROCKS=2.2.2
   matrix:
-    - LUA=lua5.1
-    - LUA=lua5.2
-    - LUA=lua5.3
-    - LUA=luajit     # latest stable version (2.0.3)
-    - LUA=luajit2.0  # current head of 2.0 branch
-    - LUA=luajit2.1  # current head of 2.1 branch
+    - LUA=lua5.1    LUAVER=5.1
+    - LUA=lua5.2    LUAVER=5.2
+    - LUA=lua5.3    LUAVER=5.3
+    - LUA=luajit    LUAVER=5.1 # latest stable version (2.0.3)
+    - LUA=luajit2.0 LUAVER=5.1 # current head of 2.0 branch
+    - LUA=luajit2.1 LUAVER=5.1 # current head of 2.1 branch
 
 before_install:
   - source .travis/setenv_lua.sh

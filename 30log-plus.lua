@@ -42,6 +42,7 @@ local function instantiate(call_init, self, ...)
 	assert_call_from_class(self, 'new(...) or class(...)')
 	local instance = {class = self}
 	_instances[instance] = tostring(instance)
+	--TODO: deep_copy removal
 	deep_copy(self, instance, 'table')
 	instance.__index = nil
 	instance.mixins = nil
@@ -50,6 +51,7 @@ local function instantiate(call_init, self, ...)
 	setmetatable(instance,self)
 	if call_init and self.init then
 		if type(self.init) == 'table' then
+			--TODO: deep_copy removal
 			deep_copy(self.init, instance)
 		else
 			self.init(instance, ...)
@@ -62,55 +64,137 @@ end
 local path = string.sub(..., 1, string.len(...) - string.len("30log-plus"))
 local chainHandlers = require(path .. "chainHandlers")
 
-local function construcIntercepts(self, mixin, handlers, selfCallbacks)
-	mixin = mixin
-	return handlers, selfCallbacks
+local function verifyCallback(obj, name, callbacks)
+	if type(obj[name]) == "function" then
+		callbacks[name] = callbacks[name] or obj[name]
+	end
 end
 
-local function constructHandlers(self, mixin, handlers, selfCallbacks)
-	handlers, selfCallbacks= construcIntercepts(self, mixin, handlers, selfCallbacks)
-	local mixinHandlers = {}
+local function construcIntercepts(obj, mixin, before, after, objCallbacks)
+	for _ , name in ipairs(mixin.intercept or {}) do
+		if type(mixin["Before"..name]) == "function" then
+			before[name] = before[name] or {}
+			table.insert(before[name], mixin["Before"..name])
+		end
+		if type(mixin["After"..name]) == "function" then
+			after[name] = after[name] or {}
+			table.insert(after[name], mixin["After"..name])
+		end
+		verifyCallback(obj, name, objCallbacks)
+	end
+end
+
+local function constructHandlers(obj, mixin, handlers, objCallbacks)
+	local mHandlers = {}
 	for _ , v in ipairs(mixin.chained or {}) do
 		if type(mixin[v]) == "function" then
-			mixinHandlers[v] = mixin[v]
+			mHandlers[v] = mixin[v]
 		end
 	end
-	for handlerName, mixinHandler in pairs(mixinHandlers) do
-		handlers[handlerName] = handlers[handlerName] or {}
-		table.insert(handlers[handlerName], mixinHandler)
-		if type(self[handlerName]) == "function" then
-			selfCallbacks[handlerName] = selfCallbacks[handlerName] or self[handlerName]
-		end
+	for name, handler in pairs(mHandlers) do
+		handlers[name] = handlers[name] or {}
+		table.insert(handlers[name], handler)
+		verifyCallback(obj, name, objCallbacks)
 	end
-	return handlers, selfCallbacks
+end
+
+local reserved = {
+	init  = true,
+	setup = true,
+}
+
+local function checkChain(tbl, key)
+	for _, name in ipairs(tbl) do
+		if key == name then return false end
+	end
+	return true
+end
+
+local function checkInter(tbl, key)
+	for _, name in ipairs(tbl) do
+		if key == "Before"..name or key == "After"..name then return false end
+	end
+	return true
+end
+
+local function validFunc(mixin, key)
+	if type(mixin[key]) ~= "function" then return false end
+	if reserved[key] then return false end
+	local intercept = mixin.intercept or {}
+	local chained   = mixin.chained   or {}
+	return (          #intercept        <            #chained        ) and
+		   (checkInter(intercept, key) and checkChain(chained  , key)) or
+		   (checkChain(chained  , key) and checkInter(intercept, key))
 end
 
 local function new(self,...)
-		local lineage = {}
-		local obj = self
-		repeat
-			table.insert(lineage, 1, obj)
-			obj = obj.super
-		until obj == nil
-		for _, class in ipairs(lineage) do
-			if class.setup then class.setup(self, ...) end
+	local lineage = {}
+	local obj = self
+	repeat
+		table.insert(lineage, 1, obj)
+		obj = obj.super
+	until obj == nil
+	for _, class in ipairs(lineage) do
+		if class.setup then class.setup(self, ...) end
+	end
+	local handlers, selfCallbacks = {}, {}
+	local before  , after         = {}, {}
+	for _, mixin in pairs(self.ordMixins) do
+		constructHandlers(self, mixin, handlers, selfCallbacks)
+		for key, func in pairs(mixin) do
+			if validFunc(mixin, key) then
+				self[key] = func
+			end
 		end
-		local handlers, selfCallbacks= {}, {}
-		for _, mixin in pairs(self.ordMixins) do
-			handlers, selfCallbacks = constructHandlers(self, mixin, handlers, selfCallbacks)
-			local setup = mixin.setup
-			mixin.setup = nil
-			deep_copy(mixin, self, "function")
-			mixin.setup = setup
-			if mixin.setup then mixin.setup(self, ...) end
+		if mixin.setup then mixin.setup(self, ...) end
+		construcIntercepts(self, mixin, before, after, selfCallbacks)
+	end
+	for name, callback in pairs(selfCallbacks) do
+		handlers[name] = handlers[name] or {}
+		table.insert(handlers[name], callback)
+	end
+	for name, callbacks in pairs(before) do
+		handlers[name] = handlers[name] or {}
+		for _, callback in ipairs(callbacks) do
+			table.insert(handlers[name], 1, callback)
 		end
-		local nObj = instantiate(true, self, ...)
-		for name, callback in pairs(selfCallbacks) do
+	end
+	for name, callbacks in pairs(after) do
+		handlers[name] = handlers[name] or {}
+		for _, callback in ipairs(callbacks) do
 			table.insert(handlers[name], callback)
 		end
-		chainHandlers(nObj, handlers)
-		return nObj
 	end
+	local nObj = instantiate(true, self, ...)
+	chainHandlers(nObj, handlers)
+	return nObj
+end
+
+local function with(self,...)
+	assert_call_from_class(self, 'with(mixin)')
+	for _, mixin in ipairs({...}) do
+		assert(self.mixins[mixin] ~= true, ('Attempted to include a mixin which was already included in %s'):format(tostring(self)))
+		self.mixins[mixin] = true
+		table.insert(self.ordMixins, mixin)
+	end
+	return self
+end
+
+function without(self, ...)
+	assert_call_from_class(self, 'without(mixin)')
+	for _, mixin in ipairs({...}) do
+		assert(self.mixins[mixin] == true, ('Attempted to remove a mixin which is not included in %s'):format(tostring(self)))
+		self.mixins[mixin] = nil
+		for k, v in ipairs(self.ordMixins) do
+			if v == mixin then
+				table.remove(self.ordMixins, k)
+				break
+			end
+		end
+	end
+	return self
+end
+
 -- End of Cpeosphoros's code
 
 local function bind(f, v)
@@ -124,6 +208,7 @@ local function extend(self, name, extra_params)
 	local heir = {}
 	_classes[heir] = tostring(heir)
 	self.__subclasses[heir] = true
+	--TODO: deep_copy removal
 	deep_copy(extra_params, deep_copy(self, heir))
 	heir.name    = extra_params and extra_params.name or name
 	heir.__index = heir
@@ -156,6 +241,7 @@ local class = {
 }
 
 _class = function(name, attr)
+	--TODO: deep_copy removal
 	local c = deep_copy(attr)
 	_classes[c] = tostring(c)
 	c.name = name or c.name
@@ -226,42 +312,17 @@ _class = function(name, attr)
 		return self
 	end
 
-	-- c.with modified by cpeosphoros
-	c.with = function(self,...)
-		assert_call_from_class(self, 'with(mixin)')
-		for _, mixin in ipairs({...}) do
-			assert(self.mixins[mixin] ~= true, ('Attempted to include a mixin which was already included in %s'):format(tostring(self)))
-			self.mixins[mixin] = true
-			table.insert(self.ordMixins, mixin)
-		end
-		return self
-	end
-
-	c.new = new
-
 	c.includes = function(self, mixin)
 		assert_call_from_class(self,'includes(mixin)')
 		return not not (self.mixins[mixin] or (self.super and self.super:includes(mixin)))
 	end
 
-	--30log-plus TODO: rework mixin exclusion
-	c.without = function(self, ...)
-		assert_call_from_class(self, 'without(mixin)')
-		for _, mixin in ipairs({...}) do
-			assert(self.mixins[mixin] == true, ('Attempted to remove a mixin which is not included in %s'):format(tostring(self)))
-			local classes = self:subclasses()
-			classes[#classes + 1] = self
-			for _, class in ipairs(classes) do
-				for method_name, method in pairs(mixin) do
-					if type(method) == 'function' then
-						class[method_name] = nil
-					end
-				end
-			end
-			self.mixins[mixin] = nil
-		end
-		return self
-	end
+	c.with = with
+
+	c.new = new
+
+	c.without = without
+
 	return setmetatable(c, baseMt)
 end
 
