@@ -321,7 +321,7 @@ context('mixinsplus', function()
 			assert_equal(instance.a, "BdBcC1C2C3XXAcAd")
 		end)
 	end
-	context('Using both kind of speacial methods', function()
+	context('Using both kind of special methods', function()
 		context('within the same mixin', function()
 			test('should follow the sequencing rules for both.', function()
 					instance = aclass:extend():with(intC)()
