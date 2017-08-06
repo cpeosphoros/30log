@@ -326,9 +326,9 @@ _class = function(name, attr)
 	return setmetatable(c, baseMt)
 end
 
-class._DESCRIPTION = '30 lines library for object orientation in Lua'
-class._VERSION     = '30log v1.3.0'
-class._URL         = 'http://github.com/Yonaba/30log'
+class._DESCRIPTION = '30 lines library for object orientation in Lua, plus some features'
+class._VERSION     = '30log-plus v0.0.0'
+class._URL         = 'http://github.com/cpeosphoros/30log-plus'
 class._LICENSE     = 'MIT LICENSE <http://www.opensource.org/licenses/mit-license.php>'
 
 return setmetatable(class,{__call = function(_,...) return _class(...) end })
