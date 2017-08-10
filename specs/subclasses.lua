@@ -96,6 +96,7 @@ context('Derivation', function()
 		end)
 
 		test('leaving the original superclass method untouched',function()
+			function Frame:setSize(size) self.w, self.h = size, size end
 			local frame = Frame()
 			Frame.super.setSize(frame,50,55)
 			assert_equal(frame.w,50)

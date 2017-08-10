@@ -13,8 +13,8 @@ context('Instantiation', function()
 		win2 = Window(15)
 		win3 = Window:create(25)
 
-		should_err = function() local win_new = win1:new() end
-		should_err2 = function() local win_new = win1() end
+		should_err = function() win1:new() end
+		should_err2 = function() win1() end
 	end)
 
 	test('instances are created via new()',function()
@@ -120,26 +120,27 @@ context('attributes',function()
 	local aclass, instance
 
 	before(function()
-		aclass = class('aclass', {attr = 'attr', value = 0, tab = {}})
+		aclass = class('aclass',
+			{attr = 'attr', attr2 = 'attr2', v1 = 0, v2 = 0, tab = {}})
 		instance = aclass()
+		instance.tab.v = 1
+		instance.attr, instance.v1 = 'instance_attr', 1
 	end)
 
 	test('instances takes by default their class attributes values', function()
-		assert_equal(instance.attr, 'attr')
-		assert_equal(instance.value, 0)
+		assert_equal(instance.attr2, 'attr2')
+		assert_equal(instance.v2, 0)
 	end)
 
 	test('these attributes are independant copies', function()
-		instance.attr, instance.value = 'instance_attr', 1
-		instance.tab.v = 1
 		assert_equal(instance.attr, 'instance_attr')
-		assert_equal(instance.value, 1)
+		assert_equal(instance.v1, 1)
 		assert_equal(instance.tab.v, 1)
 	end)
 
 	test('modifying them will not affect the class attributes', function()
 		assert_equal(aclass.attr, 'attr')
-		assert_equal(aclass.value, 0)
+		assert_equal(aclass.v1, 0)
 		assert_nil(aclass.tab.v)
 	end)
 

@@ -21,38 +21,43 @@ local function assert_call_from_instance(instance, method)
 	assert(_instances[instance], ('Wrong method call. Expected instance:%s.'):format(method))
 end
 
-local function deep_copy(t, dest, aType)
+local function deep_copy(t, dest, aType, reserved)
+	reserved = reserved or {}
 	t = t or {}
 	local r = dest or {}
 	for k,v in pairs(t) do
-		if aType ~= nil and type(v) == aType then
-			r[k] = (type(v) == 'table')
-							and ((_classes[v] or _instances[v]) and v or deep_copy(v))
-							or v
-		elseif aType == nil then
-			r[k] = (type(v) == 'table')
-			        and k~= '__index' and ((_classes[v] or _instances[v]) and v or deep_copy(v))
-							or v
+		if not reserved[k] then
+			if aType ~= nil and type(v) == aType then
+				r[k] = (type(v) == 'table')
+								and ((_classes[v] or _instances[v]) and v or deep_copy(v))
+								or v
+			elseif aType == nil then
+				r[k] = (type(v) == 'table')
+						and k~= '__index' and ((_classes[v] or _instances[v]) and v or deep_copy(v))
+								or v
+			end
 		end
 	end
 	return r
 end
 
+local reservedKeys = {
+	__index      = true,
+	mixins       = true,
+	ordMixins    = true,
+	__subclasses = true,
+	__instances  = true,
+}
+
 local function instantiate(call_init, self, ...)
 	assert_call_from_class(self, 'new(...) or class(...)')
 	local instance = {class = self}
 	_instances[instance] = tostring(instance)
-	--TODO: deep_copy removal
-	deep_copy(self, instance, 'table')
-	instance.__index = nil
-	instance.mixins = nil
-	instance.__subclasses = nil
-	instance.__instances = nil
+	deep_copy(self, instance, 'table', reservedKeys)
 	setmetatable(instance,self)
 	if call_init and self.init then
 		if type(self.init) == 'table' then
-			--TODO: deep_copy removal
-			deep_copy(self.init, instance)
+		deep_copy(self.init, instance)
 		else
 			self.init(instance, ...)
 		end
