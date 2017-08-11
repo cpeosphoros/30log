@@ -12,8 +12,8 @@ context('mixins', function()
 		mixin_bar     = {bar = function() end}
 		mixin_baz     = {baz = function() end}
 		mixin_mix     = {f = function() end, g = true}
-		aclass        = class()
-		asubclass     = aclass:extend()
+		aclass        = class("A")
+		asubclass     = aclass:extend("SUB")
 		instance      = aclass()
 		sub_instance  = asubclass()
 	end)
@@ -23,7 +23,7 @@ context('mixins', function()
 		local instance
 
 		before(function()
-				instance = asubclass:with(mixin_mix)()
+			instance = asubclass:extend():with(mixin_mix)()
 		end)
 
 		test('adds mixins to classes', function()
@@ -36,63 +36,55 @@ context('mixins', function()
 		end)
 
 		test('including a mixin twice raises an error', function()
-			local function f() aclass:with(mixin_mix) end
-			assert_not_error(f)
-			assert_error(f)
+			assert_false(aclass:includes(mixin_mix))
+			local bclass = aclass:extend("B"):with(mixin_mix)
+			assert_true(bclass:includes(mixin_mix))
+			assert_error(function()
+				cclass = bclass:extend("C"):with(mixin_mix)
+			end)
 		end)
 
-		test('with() can take a vararg of mixins', function()
-			local i = aclass:with(mixin_foo, mixin_bar, mixin_baz)()
+		test('can take a vararg of mixins', function()
+			local i = aclass:extend()
+						:with(mixin_foo, mixin_bar, mixin_baz)()
 			assert_type(i.foo, 'function')
 			assert_type(i.bar, 'function')
 			assert_type(i.baz, 'function')
 		end)
 
 		test('or just use chaining', function()
-			local i = aclass:with(mixin_foo)
+			local i = aclass:extend()
+						:with(mixin_foo)
 						:with(mixin_bar)
 						:with(mixin_baz)()
 			assert_type(i.foo, 'function')
 			assert_type(i.bar, 'function')
 			assert_type(i.baz, 'function')
 		end)
-
- --CPE: Rewritten with the new way :with() works
-		test('a previous subclass has no access to the new methods', function()
-			aclass:with(mixin_foo, mixin_bar, mixin_baz)
-			assert_nil(asubclass.foo)
-			assert_nil(asubclass.bar)
-			assert_nil(asubclass.baz)
-		end)
-
- --CPE: Rewritten with the new way :with() works
-		test('a previous instance has no access to the new methods', function()
-			aclass:with(mixin_foo, mixin_bar, mixin_baz)
-			assert_nil(instance.foo)
-			assert_nil(instance.bar)
-			assert_nil(instance.baz)
-		end)
-
 	end)
 
 	context('includes', function()
 
+		local bclass, cclass
+
 		before(function()
-			aclass:with(mixin_foo, mixin_bar, mixin_baz, mixin_mix)
+			bclass = aclass:extend()
+				:with(mixin_foo, mixin_bar, mixin_baz, mixin_mix)
+			cclass = bclass:extend()
 		end)
 
 		test('returns true if a class includes a mixin', function()
-			assert_true(aclass:includes(mixin_foo))
-			assert_true(aclass:includes(mixin_bar))
-			assert_true(aclass:includes(mixin_baz))
-			assert_true(aclass:includes(mixin_mix))
+			assert_true(bclass:includes(mixin_foo))
+			assert_true(bclass:includes(mixin_bar))
+			assert_true(bclass:includes(mixin_baz))
+			assert_true(bclass:includes(mixin_mix))
 		end)
 
 		test('and also when a superclass of the class includes a mixin', function()
-			assert_true(asubclass:includes(mixin_foo))
-			assert_true(asubclass:includes(mixin_bar))
-			assert_true(asubclass:includes(mixin_baz))
-			assert_true(asubclass:includes(mixin_mix))
+			assert_true(cclass:includes(mixin_foo))
+			assert_true(cclass:includes(mixin_bar))
+			assert_true(cclass:includes(mixin_baz))
+			assert_true(cclass:includes(mixin_mix))
 		end)
 
 	end)

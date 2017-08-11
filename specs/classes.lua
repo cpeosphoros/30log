@@ -119,9 +119,9 @@ context('a class also implements some attributes', function()
 	end)
 
 	test('and some private metamethods meant for its instances', function()
+		assert_type(aclass.__call, 'function')
 		assert_type(aclass.__tostring, 'function')
 		assert_type(aclass.__index, 'table')
-		assert_type(aclass.__call, 'function')
 	end)
 
 end)

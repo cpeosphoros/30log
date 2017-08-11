@@ -2,9 +2,9 @@
 -- @author: CPE
 
 return function(base, handlers)
-	for handler, callbacks in pairs(handlers) do
+	for handler, callbacks in handlers:iterate() do
 		base[handler] = function(...)
-			for _, callback in ipairs(callbacks) do
+			for callback in callbacks:iterate() do
 				local res = callback(...)
 				if not res then return false end
 			end

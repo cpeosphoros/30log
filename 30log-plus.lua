@@ -9,16 +9,19 @@ local setmetatable = setmetatable
 
 local _class
 local baseMt     = {}
-local _instances = setmetatable({},{__mode = 'k'})
-local _classes   = setmetatable({},{__mode = 'k'})
 
+local reqPath = string.sub(..., 1, string.len(...) - string.len("30log-plus"))
+local list = require(reqPath .. "linkedList")
+
+local _instances = list()
+local _classes   = list()
 
 local function assert_call_from_class(class, method)
-	assert(_classes[class], ('Wrong method call. Expected class:%s.'):format(method))
+	assert(_classes:contains(class), ('Wrong method call. Expected class:%s.'):format(method))
 end
 
 local function assert_call_from_instance(instance, method)
-	assert(_instances[instance], ('Wrong method call. Expected instance:%s.'):format(method))
+	assert(_instances:contains(instance), ('Wrong method call. Expected instance:%s.'):format(method))
 end
 
 local function deep_copy(t, dest, aType, reserved)
@@ -29,11 +32,11 @@ local function deep_copy(t, dest, aType, reserved)
 		if not reserved[k] then
 			if aType ~= nil and type(v) == aType then
 				r[k] = (type(v) == 'table')
-								and ((_classes[v] or _instances[v]) and v or deep_copy(v))
+								and ((_classes:contains(v) or _instances:contains(v)) and v or deep_copy(v))
 								or v
 			elseif aType == nil then
 				r[k] = (type(v) == 'table')
-						and k~= '__index' and ((_classes[v] or _instances[v]) and v or deep_copy(v))
+						and k~= '__index' and ((_classes:contains(v) or _instances:contains(v)) and v or deep_copy(v))
 								or v
 			end
 		end
@@ -44,7 +47,6 @@ end
 local reservedKeys = {
 	__index      = true,
 	mixins       = true,
-	ordMixins    = true,
 	__subclasses = true,
 	__instances  = true,
 }
@@ -52,9 +54,10 @@ local reservedKeys = {
 local function instantiate(call_init, self, ...)
 	assert_call_from_class(self, 'new(...) or class(...)')
 	local instance = {class = self}
-	_instances[instance] = tostring(instance)
+	instance._string = tostring(instance)
+	_instances:push(instance)
 	deep_copy(self, instance, 'table', reservedKeys)
-	setmetatable(instance,self)
+	instance = setmetatable(instance,self)
 	if call_init and self.init then
 		if type(self.init) == 'table' then
 		deep_copy(self.init, instance)
@@ -65,45 +68,35 @@ local function instantiate(call_init, self, ...)
 	return instance
 end
 
--- Cpeosphoros's code
-local path = string.sub(..., 1, string.len(...) - string.len("30log-plus"))
-local chainHandlers = require(path .. "chainHandlers")
+local chainHandlers = require(reqPath .. "chainHandlers")
 
 local function verifyCallback(obj, name, callbacks)
 	if type(obj[name]) == "function" then
-		callbacks[name] = callbacks[name] or obj[name]
+		callbacks:get(name, obj[name])
 	end
-end
-
-local function tblInsert(tbl, value)
-	tbl[#tbl+1] = value
 end
 
 local function construcIntercepts(obj, mixin, before, after, objCallbacks)
 	for _ , name in ipairs(mixin.intercept or {}) do
+		local verify = false
 		if type(mixin["Before"..name]) == "function" then
-			before[name] = before[name] or {}
-			tblInsert(before[name], mixin["Before"..name])
+			before:get(name, list()):prepend(mixin["Before"..name])
+			verify = true
 		end
 		if type(mixin["After"..name]) == "function" then
-			after[name] = after[name] or {}
-			tblInsert(after[name], mixin["After"..name])
+			after:get(name, list()):push(mixin["After"..name])
+			verify = true
 		end
-		verifyCallback(obj, name, objCallbacks)
+		if verify then verifyCallback(obj, name, objCallbacks) end
 	end
 end
 
 local function constructHandlers(obj, mixin, handlers, objCallbacks)
-	local mHandlers = {}
-	for _ , v in ipairs(mixin.chained or {}) do
-		if type(mixin[v]) == "function" then
-			mHandlers[v] = mixin[v]
+	for _ , name in ipairs(mixin.chained or {}) do
+		if type(mixin[name]) == "function" then
+			handlers:get(name, list()):push(mixin[name])
+			verifyCallback(obj, name, objCallbacks)
 		end
-	end
-	for name, handler in pairs(mHandlers) do
-		handlers[name] = handlers[name] or {}
-		tblInsert(handlers[name], handler)
-		verifyCallback(obj, name, objCallbacks)
 	end
 end
 
@@ -137,18 +130,20 @@ local function validFunc(mixin, key)
 end
 
 local function new(self,...)
-	local lineage = {}
+	local lineage = list()
 	local obj = self
 	repeat
-		table.insert(lineage, 1, obj)
+		lineage:prepend(obj)
 		obj = obj.super
 	until obj == nil
-	for _, class in ipairs(lineage) do
+	for class in lineage:iterate() do
 		if class.setup then class.setup(self, ...) end
 	end
-	local handlers, selfCallbacks = {}, {}
-	local before  , after         = {}, {}
-	for _, mixin in pairs(self.ordMixins) do
+
+	local handlers, selfCallbacks = list(), list()
+	local before  , after         = list(), list()
+
+	for mixin in self.mixins:iterate() do
 		constructHandlers(self, mixin, handlers, selfCallbacks)
 		for key, func in pairs(mixin) do
 			if validFunc(mixin, key) then
@@ -158,21 +153,20 @@ local function new(self,...)
 		if mixin.setup then mixin.setup(self, ...) end
 		construcIntercepts(self, mixin, before, after, selfCallbacks)
 	end
-	for name, callback in pairs(selfCallbacks) do
-		handlers[name] = handlers[name] or {}
-		tblInsert(handlers[name], callback)
+
+	for name, callback in selfCallbacks:iterate() do
+		handlers:get(name, list()):push(callback)
 	end
-	for name, callbacks in pairs(before) do
-		handlers[name] = handlers[name] or {}
-		for _, callback in ipairs(callbacks) do
-			table.insert(handlers[name], 1, callback)
-		end
+
+	for name, callbacks in before:iterate() do
+		local _handlers = handlers:get(name, list())
+		_handlers = callbacks:join(_handlers)
+		handlers:set(name, _handlers)
 	end
-	for name, callbacks in pairs(after) do
-		handlers[name] = handlers[name] or {}
-		for _, callback in ipairs(callbacks) do
-			tblInsert(handlers[name], callback)
-		end
+	for name, callbacks in after:iterate() do
+		local _handlers = handlers:get(name, list())
+		_handlers = _handlers:join(callbacks)
+		handlers:set(name, _handlers)
 	end
 	local nObj = instantiate(true, self, ...)
 	chainHandlers(nObj, handlers)
@@ -182,29 +176,19 @@ end
 local function with(self,...)
 	assert_call_from_class(self, 'with(mixin)')
 	for _, mixin in ipairs({...}) do
-		assert(self.mixins[mixin] ~= true, ('Attempted to include a mixin which was already included in %s'):format(tostring(self)))
-		self.mixins[mixin] = true
-		tblInsert(self.ordMixins, mixin)
+		assert(self.mixins:push(mixin), ('Attempted to include a mixin which was already included in %s'):format(tostring(self)))
 	end
 	return self
 end
 
-function without(self, ...)
+local function without(self, ...)
 	assert_call_from_class(self, 'without(mixin)')
 	for _, mixin in ipairs({...}) do
-		assert(self.mixins[mixin] == true, ('Attempted to remove a mixin which is not included in %s'):format(tostring(self)))
-		self.mixins[mixin] = nil
-		for k, v in ipairs(self.ordMixins) do
-			if v == mixin then
-				table.remove(self.ordMixins, k)
-				break
-			end
-		end
+		assert(self.mixins:contains(mixin), ('Attempted to remove a mixin which is not included in %s'):format(tostring(self)))
+		self.mixins:remove(mixin)
 	end
 	return self
 end
-
--- End of Cpeosphoros's code
 
 local function bind(f, v)
 	return function(...) return f(v, ...) end
@@ -214,15 +198,17 @@ local default_filter = function() return true end
 
 local function extend(self, name, extra_params)
 	assert_call_from_class(self, 'extend(...)')
-	local heir = {}
-	_classes[heir] = tostring(heir)
+	if _classes:contains(extra_params) then
+		return extra_params:extend(name)
+	end
+	local heir = deep_copy(extra_params, deep_copy(self, {}, "function"))
+	_classes:push(heir)
 	self.__subclasses[heir] = true
-	--TODO: deep_copy removal
-	deep_copy(extra_params, deep_copy(self, heir))
 	heir.name    = extra_params and extra_params.name or name
 	heir.__index = heir
 	heir.super   = self
-	--heir.mixins = {}
+	heir.mixins  = self.mixins:copy()
+	heir._string = tostring(heir)
 	return setmetatable(heir,self)
 end
 
@@ -230,29 +216,35 @@ baseMt = {
 	__call = function (self,...) return self:new(...) end,
 
 	__tostring = function(self,...)
-		if _instances[self] then
-			return ("instance of '%s' (%s)"):format(rawget(self.class,'name')
-								or '?', _instances[self])
+
+		if _instances:contains(self) then
+			return ("instance of '%s' (%s)"):
+			format(
+				rawget(self.class,'name') or '?',
+				self._string
+			)
 		end
-		return _classes[self]
-							and ("class '%s' (%s)"):format(rawget(self,'name')
-							or '?',
-					_classes[self]) or self
+
+		if _classes:contains(self) then
+			return	("class '%s' (%s)"):format(
+				rawget(self,'name') or '?',
+				self._string)
+		end
 	end
 }
 
-_classes[baseMt] = tostring(baseMt)
+_classes:push(baseMt)
 setmetatable(baseMt, {__tostring = baseMt.__tostring})
 
 local class = {
-	isClass   = function(t) return not not _classes[t] end,
-	isInstance = function(t) return not not _instances[t] end,
+	isClass   = function(t) return _classes:contains(t) end,
+	isInstance = function(t) return _instances:contains(t) end,
 }
 
 _class = function(name, attr)
 	--TODO: deep_copy removal
 	local c = deep_copy(attr)
-	_classes[c] = tostring(c)
+	_classes:push(c)
 	c.name = name or c.name
 	c.__tostring = baseMt.__tostring
 	c.__call = baseMt.__call
@@ -261,8 +253,7 @@ _class = function(name, attr)
 	c.extend = extend
 	c.__index = c
 
-	c.mixins = setmetatable({},{__mode = 'k'})
-	c.ordMixins = {}
+	c.mixins = list()
 	c.__instances = setmetatable({},{__mode = 'k'})
 	c.__subclasses = setmetatable({},{__mode = 'k'})
 
@@ -270,7 +261,7 @@ _class = function(name, attr)
 		assert_call_from_class(self, 'subclasses(class)')
 		filter = filter or default_filter
 		local subclasses = {}
-		for class in pairs(_classes) do
+		for class in _classes:iterate() do
 			if class ~= baseMt and class:subclassOf(self) and filter(class,...) then
 				subclasses[#subclasses + 1] = class
 			end
@@ -282,7 +273,7 @@ _class = function(name, attr)
 		assert_call_from_class(self, 'instances(class)')
 		filter = filter or default_filter
 		local instances = {}
-		for instance in pairs(_instances) do
+		for instance in _instances:iterate() do
 			if instance:instanceOf(self) and filter(instance, ...) then
 				instances[#instances + 1] = instance
 			end
@@ -323,7 +314,7 @@ _class = function(name, attr)
 
 	c.includes = function(self, mixin)
 		assert_call_from_class(self,'includes(mixin)')
-		return not not (self.mixins[mixin] or (self.super and self.super:includes(mixin)))
+		return self.mixins:contains(mixin)
 	end
 
 	c.with = with
