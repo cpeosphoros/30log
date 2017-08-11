@@ -54,8 +54,7 @@ local reservedKeys = {
 local function instantiate(call_init, self, ...)
 	assert_call_from_class(self, 'new(...) or class(...)')
 	local instance = {class = self}
-	instance._string = tostring(instance)
-	_instances:push(instance)
+	_instances:push(instance, tostring(instance))
 	deep_copy(self, instance, 'table', reservedKeys)
 	instance = setmetatable(instance,self)
 	if call_init and self.init then
@@ -66,6 +65,21 @@ local function instantiate(call_init, self, ...)
 		end
 	end
 	return instance
+end
+
+local function extend(self, name, extra_params)
+	assert_call_from_class(self, 'extend(...)')
+	if _classes:contains(extra_params) then
+		return extra_params:extend(name)
+	end
+	local heir = deep_copy(extra_params, deep_copy(self, {}, "function"))
+	_classes:push(heir, tostring(heir))
+	self.__subclasses[heir] = true
+	heir.name    = extra_params and extra_params.name or name
+	heir.__index = heir
+	heir.super   = self
+	heir.mixins  = self.mixins:copy()
+	return setmetatable(heir,self)
 end
 
 local chainHandlers = require(reqPath .. "chainHandlers")
@@ -196,39 +210,24 @@ end
 
 local default_filter = function() return true end
 
-local function extend(self, name, extra_params)
-	assert_call_from_class(self, 'extend(...)')
-	if _classes:contains(extra_params) then
-		return extra_params:extend(name)
-	end
-	local heir = deep_copy(extra_params, deep_copy(self, {}, "function"))
-	_classes:push(heir)
-	self.__subclasses[heir] = true
-	heir.name    = extra_params and extra_params.name or name
-	heir.__index = heir
-	heir.super   = self
-	heir.mixins  = self.mixins:copy()
-	heir._string = tostring(heir)
-	return setmetatable(heir,self)
-end
-
 baseMt = {
 	__call = function (self,...) return self:new(...) end,
 
 	__tostring = function(self,...)
-
 		if _instances:contains(self) then
 			return ("instance of '%s' (%s)"):
 			format(
 				rawget(self.class,'name') or '?',
-				self._string
+				_instances:get(self)
 			)
 		end
 
 		if _classes:contains(self) then
-			return	("class '%s' (%s)"):format(
+			return	("class '%s' (%s)"):
+			format(
 				rawget(self,'name') or '?',
-				self._string)
+				_classes:get(self)
+			)
 		end
 	end
 }
@@ -244,11 +243,10 @@ local class = {
 _class = function(name, attr)
 	--TODO: deep_copy removal
 	local c = deep_copy(attr)
-	_classes:push(c)
+	_classes:push(c, tostring(c))
 	c.name = name or c.name
 	c.__tostring = baseMt.__tostring
 	c.__call = baseMt.__call
-	--c.new = bind(instantiate, true)
 	c.create = bind(instantiate, false)
 	c.extend = extend
 	c.__index = c
