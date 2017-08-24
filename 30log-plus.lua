@@ -90,11 +90,10 @@ end
 
 local function _class(name, params)
 	assert(not meta.isClass(params), "A class cannot be used as attributes.")
-	local c  = ext(meta, name, params)
-	c.ext      = ext
-	c.extend   = extend
-	c.new      = meta.new
-	c.includes = includes
+	local c      = ext(meta, name, params)
+	c.ext        = ext
+	c.extend     = extend
+	c.includes   = includes
 	return c:_end()
 end
 

@@ -72,7 +72,7 @@ local function deepCopy(value, cache, promises, copies)
 		for k, v in pairs(new) do
 			tbl[k] = v
 		end
-		print()
+--		print()
 		return tbl
 	end
 	correctRec(copy)

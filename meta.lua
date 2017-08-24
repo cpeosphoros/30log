@@ -37,7 +37,7 @@ end
 
 function meta:__tostring()
 	if instances[self] then
-		return ("instance of '%s'-%s (%s)"):
+		return ("instance of %s-%s (%s)"):
 		format(
 			rawget(self.class,'name') or '?',
 			self.__id                       ,
@@ -46,7 +46,7 @@ function meta:__tostring()
 	end
 
 	if classes[self] then
-		return	("class '%s'-%d (%s)"):
+		return	("class %s-%d (%s)"):
 		format(
 			rawget(self,'name') or '?',
 			self.__id                 ,
@@ -59,13 +59,10 @@ end
 
 function meta:__index(key)
 	if type(key) == "string" then
-		--print(self, self.id, rawget(self, "id"), "__index",key)
 		local class = meta.isClass(self) and self or self.class
 		local result = nil
 		if classes[class].methods then
---			if key == "foo" then print(class) end
 			for k, v in pairs(classes[class].methods) do
---				if key == "foo" then print(k, v) end
 				if key == k then
 					result = v
 					break
@@ -90,7 +87,6 @@ function meta:__index(key)
 end
 
 function meta:__newindex(key, value)
-	--print(self, self.id, rawget(self, "id"), "__newindex",key,value)
 	assert(not rawget(self, "methods"), "Immutable class fields cannot be set.")
 	if type(key) == "string" then
 		rawset(self, key, value)
@@ -101,23 +97,6 @@ end
 
 --------------------------------------------------------------------------------
 --                               SUBCLASSING
---------------------------------------------------------------------------------
-
-function meta.pushClass(class)
-	assert(not classes[class], "Duplicate class " .. tostring(class))
-	assert(type(class) == "table", "Class must be a table instead of " .. type(class))
-	classes[class] = {}
-	classes[class].string = tostring(class)
-	class.__id = nextId
-	nextId = nextId + 1
-
-	setmetatable(class, meta)
-	--print("pushed", class)
-	return class
-end
-
---------------------------------------------------------------------------------
---                            INSTANCE CREATION
 --------------------------------------------------------------------------------
 
 local function verifyCallback(obj, name, callbacks)
@@ -151,8 +130,12 @@ local function constructHandlers(obj, mixin, handlers, objCallbacks)
 end
 
 local reserved = {
-	init  = true,
-	setup = true,
+	ext      = true,
+	extend   = true,
+	includes = true,
+	init     = true,
+	new      = true,
+	setup    = true,
 }
 
 local function checkChain(tbl, key)
@@ -196,26 +179,39 @@ local function processMixins(methods, mixins)
 	return handlers, classCallbacks, before, after
 end
 
+local resKeys = {
+	__id     = true,
+	mixins   = true,
+	mixlook  = true,
+	name     = true,
+	super    = true,
+}
+
 local function setup(class)
 	iIds[class] = 0
+
+	if class.super ~= meta and not classes[class.super].methods then
+		setup(class.super)
+	end
+
 	local lineage = {}
 	local obj = class
 	repeat
 		lineage[#lineage + 1] = obj
 		obj = obj.super
-	until obj == nil
+	until not obj
 
 	local methods = {}
+
 	for i = #lineage, 1, -1 do
 		local cSetup = rawget(lineage[i],"setup")
 		if cSetup then cSetup(class) end
 		for k, v in next, lineage[i], nil do
-			methods[k] = v
+			if not resKeys[k] then methods[k] = v end
 		end
 	end
 
 	local mixins = class.mixins
-
 	for _, mixin in ipairs(mixins or {}) do
 		if mixin.setup then mixin.setup(class) end
 	end
@@ -238,6 +234,23 @@ local function setup(class)
 	classes[class].methods = methods
 end
 
+function meta.pushClass(class)
+	assert(not classes[class], "Duplicate class " .. tostring(class))
+	assert(type(class) == "table", "Class must be a table instead of " .. type(class))
+	classes[class] = {}
+	classes[class].string = tostring(class)
+	class.__id = nextId
+	nextId = nextId + 1
+
+	setmetatable(class, meta)
+	return class
+end
+
+--------------------------------------------------------------------------------
+--                            INSTANCE CREATION
+--------------------------------------------------------------------------------
+
+
 local function pushInstance(instance)
 	assert(not instances[instance], "Duplicate instance " .. tostring(instance))
 	instances[instance] = tostring(instance)
@@ -245,7 +258,6 @@ local function pushInstance(instance)
 	iIds[class] = iIds[class] + 1
 	instance.__id = class.__id .. "." .. iIds[class]
 	setmetatable(instance, meta)
-	--print("pushed", instance)
 	return instance
 end
 

@@ -2,9 +2,12 @@
 -- @author: CPE
 
 local function chainHandlers(base, handlers)
-	for handler, callbacks in handlers:iterate() do
+
+	local iterate = handlers.iterate and handlers.iterate or pairs
+
+	for handler, callbacks in iterate(handlers) do
 		base[handler] = function(...)
-			for callback in callbacks:iterate() do
+			for _, callback in iterate(callbacks) do
 				local res = callback(...)
 				if not res then return false end
 			end

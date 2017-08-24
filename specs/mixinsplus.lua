@@ -17,35 +17,36 @@ context('mixinsplus', function()
 	before(function()
 
 		aclass = class("",{
-		ChainA = function(self)
-			self.a = concat(self.a, "XX")
-			return true
-		end,
-		ChainB = function(self)
-			self.a = concat(self.a, "XX")
-			self.b = concat(self.b, "XX")
-			return false
-		end,
-		bar = function(self)
-			self.barV = concat(self.barV, "XX")
-		end,
-		Int1 = function(self)
-			self.e = concat(self.e, "XX")
-			return true
-		end,
-		Int3 = function(self)
-			self.g = concat(self.g, "XX")
-			return true
-		end,
-		Int4 = function(self)
-			self.h = concat(self.g, "XX")
-			return false
-		end,
-		Int5 = function(self)
-			self.i = concat(self.g, "XX")
-			return true
-		end
+			ChainA = function(self)
+				self.a = concat(self.a, "XX")
+				return true
+			end,
+			ChainB = function(self)
+				self.a = concat(self.a, "XX")
+				self.b = concat(self.b, "XX")
+				return false
+			end,
+			bar = function(self)
+				self.barV = concat(self.barV, "XX")
+			end,
+			Int1 = function(self)
+				self.e = concat(self.e, "XX")
+				return true
+			end,
+			Int3 = function(self)
+				self.g = concat(self.g, "XX")
+				return true
+			end,
+			Int4 = function(self)
+				self.h = concat(self.g, "XX")
+				return false
+			end,
+			Int5 = function(self)
+				self.i = concat(self.g, "XX")
+				return true
+			end
 		})
+
 		chain1   = { name = "chain1",
 			ChainA = function(self)
 				self.a = concat(self.a, "C1")

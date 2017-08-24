@@ -7,34 +7,6 @@
 local list = {}
 list.__index = list
 
-setmetatable(list, { __call =
-	function(_, ...)
-		local newList = setmetatable({ length = 0 }, list)
-		newList.nodes = {}
-		for _, value in ipairs{...} do newList:push(value) end
-		return newList
-	end })
-
-function list:prepend(key, value)
-	value = value or key
-	if self.nodes[key] then return false end
-	local node = {}
-	node.key = key
-	node.value = value
-	if not self.first then
-		-- this is the first node
-		self.first = node
-		self.last = node
-	else
-		self.first.prev = node
-		node.next = self.first
-		self.first = node
-	end
-	self.nodes[key] = node
-	self.length = self.length + 1
-	return true
-end
-
 local function iterate(self, current)
 	if not current then
 		local _first = self.first
@@ -54,6 +26,42 @@ local function iterate(self, current)
 	return nil, nil
 end
 
+--list.__pairs = function(self)
+--	return iterate, self, nil
+--end,
+
+setmetatable(list,
+	{
+		__call = function(_, ...)
+			local newList = setmetatable({length = 0 }, list)
+			newList.nodes = {}
+			for _, value in ipairs{...} do newList:push(value) end
+			return newList
+		end,
+	}
+)
+
+function list:prepend(key, value)
+	--print("list.prepend", key, value)
+	value = value or key
+	if self.nodes[key] then return false end
+	local node = {}
+	node.key = key
+	node.value = value
+	if not self.first then
+		-- this is the first node
+		self.first = node
+		self.last = node
+	else
+		self.first.prev = node
+		node.next = self.first
+		self.first = node
+	end
+	self.nodes[key] = node
+	self.length = self.length + 1
+	return true
+end
+
 local function insertFirst(self, node)
 	self.first.prev = node
 	node.next = self.first
@@ -67,6 +75,7 @@ local function insertLast(self, node)
 end
 
 function list:push(key, value)
+	--print("list.push", key, value)
 	value = value or key
 	if self.nodes[key] then return false end
 	local node = {}

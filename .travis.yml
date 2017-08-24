@@ -22,7 +22,7 @@ before_install:
   - luarocks install telescope        --server=http://rocks.moonscript.org
   - bash .travis/fixtsc.sh
 
-script: "tsc -f specs/*"
+script: "tsc -f specs/*.lua"
 
 after_success:
   - luacov-coveralls -c .luacov
