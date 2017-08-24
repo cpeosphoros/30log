@@ -45,9 +45,9 @@ context('Derivation', function()
 			assert_equal(Frame.super, Window)
 		end)
 
-		test('via "getmetatable(), as a superclass is the metatable of its subclasses"',function()
-			assert_equal(getmetatable(Frame),Window)
-		end)
+--		test('via "getmetatable(), as a superclass is the metatable of its subclasses"',function()
+--			assert_equal(getmetatable(Frame),Window)
+--		end)
 
 	end)
 

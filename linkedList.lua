@@ -1,5 +1,8 @@
 -- @LICENSE MIT
--- @author: Yonaba, CPE
+-- @author: CPE
+-- Loosely based on http://nova-fusion.com/2012/11/16/linked-lists-in-lua/
+
+-- TODO: Have a look at https://john.cs.olemiss.edu/~hcc//csci555/notes/CellLists/Lua/cellList.lua
 
 local list = {}
 list.__index = list
@@ -32,6 +35,37 @@ function list:prepend(key, value)
 	return true
 end
 
+local function iterate(self, current)
+	if not current then
+		local _first = self.first
+		if _first then
+			return _first.key, _first.value
+		else
+			return nil, nil
+		end
+	end
+	local node = self.nodes[current]
+	if node then
+		local _next = node.next
+		if _next then
+			return  _next.key, _next.value
+		end
+	end
+	return nil, nil
+end
+
+local function insertFirst(self, node)
+	self.first.prev = node
+	node.next = self.first
+	self.first = node
+end
+
+local function insertLast(self, node)
+	self.last.next = node
+	node.prev = self.last
+	self.last = node
+end
+
 function list:push(key, value)
 	value = value or key
 	if self.nodes[key] then return false end
@@ -43,9 +77,23 @@ function list:push(key, value)
 		self.first = node
 		self.last = node
 	else
-		self.last.next = node
-		node.prev = self.last
-		self.last = node
+		if self.ordered then
+			if     key < self.first.key then
+				insertFirst(self, node)
+			elseif key > self.last.key then
+				insertLast(self, node)
+			else
+				local cNode = self.first.next
+				while cNode.key < key do
+					cNode = cNode.next
+				end
+				cNode.prev.next = node
+				cNode.prev      = node
+				node.next       = cNode
+			end
+		else
+			insertLast(self, node)
+		end
 	end
 	self.nodes[key] = node
 	self.length = self.length + 1
@@ -114,25 +162,6 @@ end
 function list:pop()
 	if not self.last then return end
 	return self:remove(self.last.key)
-end
-
-local function iterate(self, current)
-	if not current then
-		local _first = self.first
-		if _first then
-			return _first.key, _first.value
-		else
-			return nil, nil
-		end
-	end
-	local node = self.nodes[current]
-	if node then
-		local _next = node.next
-		if _next then
-			return  _next.key, _next.value
-		end
-	end
-	return nil, nil
 end
 
 function list:iterate()

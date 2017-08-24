@@ -11,7 +11,8 @@ context('Instantiation', function()
 		function Window:setSize(size) self.size = size end
 		win1 = Window:new(10)
 		win2 = Window(15)
-		win3 = Window:create(25)
+		--excluded
+		--win3 = Window:create(25)
 
 		should_err = function() win1:new() end
 		should_err2 = function() win1() end
@@ -27,20 +28,20 @@ context('Instantiation', function()
 		assert_true(win2:instanceOf(Window))
 	end)
 
-	test('an instance can also be created via create()',function()
-		assert_true(class.isInstance(win3))
-		assert_true(win3:instanceOf(Window))
-	end)
+--	test('an instance can also be created via create()',function()
+--		assert_true(class.isInstance(win3))
+--		assert_true(win3:instanceOf(Window))
+--	end)
 
 	test('calling new() or a function call triggers init() function',function()
 		assert_equal(win1.size, 10)
 		assert_equal(win2.size, 15)
 	end)
 
-	test('but create() allocates an instance without calling init() function',function()
-		assert_not_equal(win3.size, 25)
-		assert_equal(win3.size, 100)
-	end)
+--	test('but create() allocates an instance without calling init() function',function()
+--		assert_not_equal(win3.size, 25)
+--		assert_equal(win3.size, 100)
+--	end)
 
 	test('instances have access to their class methods',function()
 		win1:setSize(50)
@@ -81,20 +82,20 @@ context('init() method',function()
 
 end)
 
-context('init can also be a table',function()
-	local Window, window
+--context('init can also be a table',function()
+--	local Window, window
 
-	before(function()
-		Window = class()
-		Window.init = {size = 200}
-	end)
+--	before(function()
+--		Window = class()
+--		Window.init = {size = 200}
+--	end)
 
-	test('its keys will be copied into the new instance',function()
-		window = Window:new()
-		assert_equal(window.size, 200)
-	end)
+--	test('its keys will be copied into the new instance',function()
+--		window = Window:new()
+--		assert_equal(window.size, 200)
+--	end)
 
-end)
+--end)
 
 context('tostring(instance) returns a string representing an instance', function()
 
@@ -120,28 +121,48 @@ context('attributes',function()
 	local aclass, instance
 
 	before(function()
+		print("here-------------------------------")
+		local tab = {}
+		tab.a = tab
+		tab.b = 1
+		tab.c = {}
+		tab.c.d = tab
+		tab.c.d.e = 2
+		tab[tab]  = 3
 		aclass = class('aclass',
-			{attr = 'attr', attr2 = 'attr2', v1 = 0, v2 = 0, tab = {}})
+			{attr = 'attr', attr2 = 'attr2', v1 = 0, v2 = 0, tab = tab})
 		instance = aclass()
 		instance.tab.v = 1
+		instance.tab.w = 2
+		instance.tab.c.d.f = 4
 		instance.attr, instance.v1 = 'instance_attr', 1
 	end)
 
 	test('instances takes by default their class attributes values', function()
+		print("------", aclass)
 		assert_equal(instance.attr2, 'attr2')
 		assert_equal(instance.v2, 0)
+		assert_equal(instance.tab, instance.tab.a)
+		assert_equal(instance.tab.b, 1)
+		assert_equal(instance.tab.e, 2)
+		assert_equal(instance.tab, instance.tab.c.d)
+		assert_equal(instance.tab[instance.tab], 3)
 	end)
 
 	test('these attributes are independant copies', function()
 		assert_equal(instance.attr, 'instance_attr')
 		assert_equal(instance.v1, 1)
+		assert_equal(instance.tab.f, 4)
 		assert_equal(instance.tab.v, 1)
+		assert_equal(instance.tab.w, 2)
 	end)
 
 	test('modifying them will not affect the class attributes', function()
 		assert_equal(aclass.attr, 'attr')
 		assert_equal(aclass.v1, 0)
+		assert_nil(aclass.tab.f)
 		assert_nil(aclass.tab.v)
+		assert_nil(aclass.tab.w)
 	end)
 
 end)

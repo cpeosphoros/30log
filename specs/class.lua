@@ -14,7 +14,7 @@ context('class()', function()
 		end)
 
 		test('this class is unnamed', function()
-			assert_nil(aclass.name)
+			assert_equal(aclass.name, "Object")
 		end)
 	end)
 
