@@ -63,7 +63,9 @@ function meta:__index(key)
 		local class = meta.isClass(self) and self or self.class
 		local result = nil
 		if classes[class].methods then
+--			if key == "foo" then print(class) end
 			for k, v in pairs(classes[class].methods) do
+--				if key == "foo" then print(k, v) end
 				if key == k then
 					result = v
 					break
@@ -77,7 +79,7 @@ function meta:__index(key)
 				current = rawget(current, "super")
 			end
 		end
-		if type(result) == "table" then
+		if result then
 			result = deepCopy(result)
 			rawset(self, key, result)
 		end
@@ -99,6 +101,23 @@ end
 
 --------------------------------------------------------------------------------
 --                               SUBCLASSING
+--------------------------------------------------------------------------------
+
+function meta.pushClass(class)
+	assert(not classes[class], "Duplicate class " .. tostring(class))
+	assert(type(class) == "table", "Class must be a table instead of " .. type(class))
+	classes[class] = {}
+	classes[class].string = tostring(class)
+	class.__id = nextId
+	nextId = nextId + 1
+
+	setmetatable(class, meta)
+	--print("pushed", class)
+	return class
+end
+
+--------------------------------------------------------------------------------
+--                            INSTANCE CREATION
 --------------------------------------------------------------------------------
 
 local function verifyCallback(obj, name, callbacks)
@@ -178,6 +197,7 @@ local function processMixins(methods, mixins)
 end
 
 local function setup(class)
+	iIds[class] = 0
 	local lineage = {}
 	local obj = class
 	repeat
@@ -218,31 +238,25 @@ local function setup(class)
 	classes[class].methods = methods
 end
 
-function meta.pushClass(class)
-	assert(not classes[class], "Duplicate class " .. tostring(class))
-	assert(type(class) == "table", "Class must be a table instead of " .. type(class))
-	classes[class] = {}
-	classes[class].string = tostring(class)
-	class.__id = nextId
-	nextId = nextId + 1
-
-	setmetatable(class, meta)
-	--print("pushed", class)
-	return class
-end
-
-function meta.pushInstance(instance)
+local function pushInstance(instance)
 	assert(not instances[instance], "Duplicate instance " .. tostring(instance))
 	instances[instance] = tostring(instance)
 	local class = instance.class
-	if not classes[class].methods then
-		setup(class)
-	end
-
-	iIds[class] = (iIds[class] or 0) + 1
+	iIds[class] = iIds[class] + 1
 	instance.__id = class.__id .. "." .. iIds[class]
 	setmetatable(instance, meta)
 	--print("pushed", instance)
+	return instance
+end
+
+function meta.new(self, ...)
+	assertClassCall(self, 'new(...) or class(...)')
+	if not classes[self].methods then
+		setup(self)
+	end
+
+	local instance = pushInstance({class = self})
+	if self.init then self.init(instance, ...) end
 	return instance
 end
 
