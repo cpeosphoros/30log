@@ -121,7 +121,6 @@ context('attributes',function()
 	local aclass, instance
 
 	before(function()
-		print("here-------------------------------")
 		local tab = {}
 		tab.a = tab
 		tab.b = 1
@@ -139,7 +138,6 @@ context('attributes',function()
 	end)
 
 	test('instances takes by default their class attributes values', function()
-		print("------", aclass)
 		assert_equal(instance.attr2, 'attr2')
 		assert_equal(instance.v2, 0)
 		assert_equal(instance.tab, instance.tab.a)

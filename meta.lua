@@ -8,7 +8,7 @@ local list          = require(reqPath .. "linkedList")
 
 local meta = {name = "Object", __immutable = true}
 
-local instances = {}
+local instances = setmetatable({},{__moode = "k"})
 local classes   = {}
 local iIds      = {}
 local nextId    = 0
@@ -94,6 +94,33 @@ function meta:__newindex(key, value)
 		meta.__setitem(self, key, value)
 	end
 end
+
+function meta:equals(obj)     return self:_eq(obj) end
+function meta:__lt(obj)       return self:_lt(obj) end
+function meta:__le(obj)       return self:_le(obj) end
+function meta:__tonumber()    return self:_tonumber() end
+function meta:__getitem(k)    return self:_getItem(k) end
+function meta:__setitem(k, v) return self:_setItem(k, v) end
+function meta:__hash()        return self:_hash() end
+function meta:__add(obj)      return self:_add(obj) end
+function meta:__sub(obj)      return self:_sub(obj) end
+function meta:__mul(obj)      return self:_mul(obj) end
+function meta:__div(obj)      return self:_div(obj) end
+function meta:__mod(obj)      return self:_mod(obj) end
+function meta:__unm()         return self:_unm() end
+function meta:__pow(obj)      return self:_pow(obj) end
+function meta:__concat(obj)   return self:_concat(obj) end
+function meta:__len()         return self:_len() end
+function meta:__pairs()       return self:_pairs() end
+function meta:__ipairs()      return self:_ipairs() end
+function meta:__gc()          return self:_gc() end
+function meta:__band(obj)     return self:_band(obj) end
+function meta:__bor(obj)      return self:_bor(obj) end
+function meta:__bxor(obj)     return self:_bxor(obj) end
+function meta:__shl(obj)      return self:_shl(obj) end
+function meta:__shr(obj)      return self:_shr(obj) end
+function meta:__bnot()        return self:_bnot() end
+function meta:__idiv(obj)     return self:_idiv(obj) end
 
 --------------------------------------------------------------------------------
 --                               SUBCLASSING
@@ -266,7 +293,6 @@ function meta.new(self, ...)
 	if not classes[self].methods then
 		setup(self)
 	end
-
 	local instance = pushInstance({class = self})
 	if self.init then self.init(instance, ...) end
 	return instance
