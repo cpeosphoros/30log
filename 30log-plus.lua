@@ -83,13 +83,6 @@ local function extend(self, name, params)
 	return self:ext(name, params):_end()
 end
 
-local function new(self, ...)
-	meta.assertClassCall(self, 'new(...) or class(...)')
-	local instance = meta.pushInstance({class = self})
-	if self.init then self.init(instance, ...) end
-	return instance
-end
-
 local function includes (self, mixin)
 	meta.assertClassCall(self,'includes(mixin)')
 	return not not self.mixlook[mixin]
@@ -100,7 +93,7 @@ local function _class(name, params)
 	local c  = ext(meta, name, params)
 	c.ext      = ext
 	c.extend   = extend
-	c.new      = new
+	c.new      = meta.new
 	c.includes = includes
 	return c:_end()
 end
